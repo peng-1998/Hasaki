@@ -1,1 +1,1 @@
-from .losses import DiceLoss,FocalLoss,dice_loss,TopKLoss
+from .losses import DiceLoss,FocalLoss,dice_loss,TopKLoss,WeightCrossEntropyLoss,focal_loss
