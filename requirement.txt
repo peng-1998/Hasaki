@@ -1,0 +1,9 @@
+pytorch
+tqdm
+wget
+gdown
+kaggle
+git
+torchvision
+nibabel
+scipy
