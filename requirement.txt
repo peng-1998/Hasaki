@@ -3,7 +3,7 @@ tqdm
 wget
 gdown
 kaggle
-git
+python-git
 torchvision
 nibabel
 scipy

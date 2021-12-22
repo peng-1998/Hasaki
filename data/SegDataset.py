@@ -1,7 +1,6 @@
 import os, json
 import shutil
 from typing import Callable, Optional, Tuple, Union
-from git.cmd import Git
 import torch
 from torch.utils.data import Dataset
 from .utils import *
