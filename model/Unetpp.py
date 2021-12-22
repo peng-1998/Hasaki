@@ -1,12 +1,8 @@
-from typing import List, Tuple
+from typing import List
 import torch.nn as nn
 import torch
 from torch.nn import Module
 from torch import Tensor
-from torch.nn.modules.activation import ReLU
-from torch.nn.modules.batchnorm import BatchNorm2d
-from torch.nn.modules.conv import ConvTranspose2d
-from torch.nn.modules.pooling import MaxPool2d
 
 
 class Unet_pp_base_block(Module):
