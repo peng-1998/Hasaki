@@ -20,7 +20,7 @@ class DiceLoss(torch.nn.Module):
 
     def forward(self, pred: Tensor, label: Tensor, weight: Tensor = 1) -> Tensor:
         assert len(pred.shape) == 4 or len(pred.shape) == 5
-        return dice_loss(F.softmax(pred, dim=1) if pred.min() < 0 or pred.max() > 1 else pred, label, weight=self.weight if self.weight is not None else weight, batch_dice=self.batch_dice, square=self.square, smooth=self.smooth)
+        return dice_loss(pred, label, weight=self.weight if self.weight is not None else weight, batch_dice=self.batch_dice, square=self.square, smooth=self.smooth)
 
 
 class IoULoss(DiceLoss):
@@ -55,7 +55,7 @@ def dice_loss(pred: Tensor, label: Tensor, weight: Tensor = 1, batch_dice: bool 
         smooth    : The smoothing term of the loss function.
     '''
     if len(pred.shape) == len(label.shape) + 1:
-        label = torch.one_hot(label, num_classes=pred.shape[1]).permute(0, len(pred.shape) - 1, *range(1, len(pred.shape) - 1)).contiguous()
+        label = F.one_hot(label, num_classes=pred.shape[1]).permute(0, len(pred.shape) - 1, *range(1, len(pred.shape) - 1)).contiguous()
     anb = weight * pred * label
 
     if square:
@@ -66,8 +66,8 @@ def dice_loss(pred: Tensor, label: Tensor, weight: Tensor = 1, batch_dice: bool 
         anb = anb.sum()
         aub = aub.sum()
     else:
-        anb = anb.sum(*range(1, len(anb.shape) - 1))
-        aub = aub.sum(*range(1, len(anb.shape) - 1))
+        anb = anb.sum(tuple([i for i in range(1, len(anb.shape) - 1)]))
+        aub = aub.sum(tuple([i for i in range(1, len(anb.shape) - 1)]))
     return 1 - (2 * anb / aub).mean()
 
 

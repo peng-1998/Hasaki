@@ -1,5 +1,5 @@
 import os
-from typing import Any, Callable, Generator, List, Optional, Sequence
+from typing import Any, Callable, Generator, List, Optional, Sequence, Tuple
 import zipfile
 import tarfile
 import hashlib
@@ -131,7 +131,11 @@ class Subset_with_T(Dataset):
 
     def __getitem__(self, index) -> Any:
         if self.transforms is not None:
-            return self.transforms(self.dataset[index])
+            data = self.dataset[index]
+            if isinstance(data,(Tuple,List)):
+                return self.transforms(*data)
+            else:
+                return self.transforms(data)
         return self.dataset[index]
     
     def __len__(self):
@@ -139,6 +143,6 @@ class Subset_with_T(Dataset):
 
 
 
-def random_split(dataset: Dataset, lengths: Sequence[int]) -> List[Subset]:
+def random_split(dataset: Dataset, lengths: Sequence[int]) -> List[Subset_with_T]:
     subsets = rsp(dataset,lengths)
     return tuple([Subset_with_T(_) for _ in subsets])

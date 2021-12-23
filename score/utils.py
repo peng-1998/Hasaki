@@ -167,8 +167,8 @@ def _aji(input: Tensor, target: Tensor) -> float:
     target_objs          = target_objs.unsqueeze(1).to(torch.float32)
     if input_objs.shape[0] == 0:
         return 0
-    ands                = F.conv2d(target_objs, input_objs).squeeze()
-    ors                 = torch.prod(torch.tensor(input.shape)) - F.conv2d(1 - target_objs, 1 - input_objs).squeeze()
+    ands                = F.conv2d(target_objs, input_objs).squeeze(-1).squeeze(-1)
+    ors                 = torch.prod(torch.tensor(input.shape)) - F.conv2d(1 - target_objs, 1 - input_objs).squeeze(-1).squeeze(-1)
     ious                = ands / ors
     (_,index)           = ious.max(dim=-1)
     index_              = torch._C._nn.one_hot(index, input.max())
