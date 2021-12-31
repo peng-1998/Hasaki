@@ -1,5 +1,6 @@
 from typing import List
 import torch
+from torch.functional import Tensor
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn import Module
@@ -75,3 +76,22 @@ class unet_like(Module):
             x = self.fuses[layer](x_, x)
             x = self.decoders[layer](x)
             return x
+
+
+class PSP_2D(Module):
+    def __init__(
+        self,
+        in_channel: int,
+        kernels: list = [1, 2, 3, 6],
+        pool_type: str = 'max',
+    ) -> None:
+        super().__init__()
+        assert pool_type in ['max', 'avg']
+        assert in_channel % len(kernels) == 0
+        self.num_kernel = len(kernels)
+        pool = nn.MaxPool2d if pool_type == 'max' else nn.AvgPool2d
+        self.pools = nn.ModuleList([pool(k, k) for k in kernels])
+        self.convs = nn.ModuleList([nn.Conv2d(in_channel, int(in_channel / self.num_kernel), 1) for _ in kernels])
+
+    def forward(self, x: Tensor) -> Tensor:
+        return torch.cat([self.convs[i](self.pools[i](x)) for i in range(self.num_kernel)], dim=1)

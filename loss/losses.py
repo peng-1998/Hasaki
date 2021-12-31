@@ -2,6 +2,7 @@ from typing import Optional
 from torch import Tensor
 import torch
 import torch.nn.functional as F
+from scipy.ndimage import distance_transform_edt
 
 
 class DiceLoss(torch.nn.Module):
@@ -98,3 +99,86 @@ class TopKLoss(torch.nn.CrossEntropyLoss):
         num = torch.prod(torch.tensor(loss.shape)).item()
         loss, _ = torch.topk(loss.view(-1), int(num * self.k / 100), sorted=False)
         return loss.mean()
+
+
+class SensitivitySpecificityLoss(DiceLoss):
+    def __init__(self, w: float = 0.5, batch_dice: bool = True, square: bool = False, smooth: float = 1) -> None:
+        super().__init__(weight=None, batch_dice=batch_dice, square=square, smooth=smooth)
+        self.w = w
+
+    def forward(self, pred: Tensor, label: Tensor):
+        if len(pred.shape) == len(label.shape) + 1:
+            label = F.one_hot(label, num_classes=pred.shape[1]).permute(0, len(pred.shape) - 1, *range(1, len(pred.shape) - 1)).contiguous()
+        pred_label2 = (label - pred)**2
+        _label = 1 - label
+        return self.w * super().forward(pred_label2, label) + (1 - self.w) * super().forward(pred_label2, _label)
+
+
+class TverskyLoss(torch.nn.Module):
+    def __init__(self, alpha: float = 1, beta: float = 1, gamma: float = 1, batch_loss=False) -> None:
+        super().__init__()
+        self.alpha = alpha
+        self.beta = beta
+        self.gamma = gamma
+        self.batch_loss = batch_loss
+
+    def forward(self, pred: Tensor, label: Tensor):
+        if len(pred.shape) == len(label.shape) + 1:
+            label = F.one_hot(label, num_classes=pred.shape[1]).permute(0, len(pred.shape) - 1, *range(1, len(pred.shape) - 1)).contiguous()
+        predlabel = pred * label
+        pred_label = pred * (1 - label)
+        _predlabel = (1 - pred) * label
+        if self.batch_loss:
+            predlabel = predlabel.sum(tuple([i for i in range(1, len(predlabel.shape) - 1)]))
+            pred_label = pred_label.sum(tuple([i for i in range(1, len(pred_label.shape) - 1)]))
+            _predlabel = _predlabel.sum(tuple([i for i in range(1, len(_predlabel.shape) - 1)]))
+        else:
+            predlabel = predlabel.sum()
+            pred_label = pred_label.sum()
+            _predlabel = _predlabel.sum()
+        return (1 - (predlabel / (predlabel + self.alpha * pred_label + self.beta * _predlabel)).mean())**self.gamma
+
+
+class GeneralizedDiceloss(DiceLoss):
+    def __init__(self, weight: Tensor = None, batch_dice: bool = True, square: bool = False, smooth: float = 1) -> None:
+        assert len(weight.shape) == 1
+        super().__init__(weight=None, batch_dice=batch_dice, square=square, smooth=smooth)
+        self.class_weight = weight
+
+    def forward(self, pred: Tensor, label: Tensor) -> Tensor:
+        return super().forward(pred, label, weight=self.weight.view(self.weight.shape[0], *[1 for _ in range(len(pred.shape) - 2)]))
+
+
+class AsymmetricSimilarityLoss(TverskyLoss):
+    def __init__(self, beta: float = 1.5, batch_loss=False) -> None:
+        super().__init__(alpha=1 / (1 + beta**2), beta=beta**2 / (1 + beta**2), gamma=1, batch_loss=batch_loss)
+
+
+class PenaltyLoss(GeneralizedDiceloss):
+    def __init__(self, weight: Tensor = None, k: float = 2.5, batch_dice: bool = True, square: bool = False, smooth: float = 1) -> None:
+        super().__init__(weight=weight, batch_dice=batch_dice, square=square, smooth=smooth)
+        self.k = k
+
+    def forward(self, pred: Tensor, label: Tensor) -> Tensor:
+        lgd = super().forward(pred, label)
+        return (self.k - 1) * lgd / (1 + self.k * lgd)
+
+
+def hausdorff_distance_loss(pred: Tensor, label: Tensor) -> Tensor:
+    pred_bmap = pred.argmax(dim=1)
+    pred_bmap = F.one_hot(pred_bmap, num_classes=pred.shape[1]).permute(0, len(pred.shape) - 1, *range(1, len(pred.shape) - 1)).cpu().numpy()
+    if len(pred.shape) == len(label.shape) + 1:
+        label = F.one_hot(label, num_classes=pred.shape[1]).permute(0, len(pred.shape) - 1, *range(1, len(pred.shape) - 1))
+        label_bmap = label.cpu().numpy()
+    else:
+        label_bmap = label.cpu().numpy()
+    dist = pred.cpu().numpy()
+    for i in range(pred.shape[0]):
+        for j in range(pred.shape[1]):
+            dist[i, j, ...] = distance_transform_edt(pred_bmap[i, j, ...]) + distance_transform_edt(label_bmap[i, j, ...])
+    return (torch.from_numpy(dist).to(pred.device) * (pred - label)).sum(dim=1).mean()
+
+
+class HausdorffDistanceLoss():
+    def forward(self, pred: Tensor, label: Tensor) -> Tensor:
+        return hausdorff_distance_loss(pred, label)
