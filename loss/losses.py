@@ -177,8 +177,3 @@ def hausdorff_distance_loss(pred: Tensor, label: Tensor) -> Tensor:
         for j in range(pred.shape[1]):
             dist[i, j, ...] = distance_transform_edt(pred_bmap[i, j, ...]) + distance_transform_edt(label_bmap[i, j, ...])
     return (torch.from_numpy(dist).to(pred.device) * (pred - label)).sum(dim=1).mean()
-
-
-class HausdorffDistanceLoss():
-    def forward(self, pred: Tensor, label: Tensor) -> Tensor:
-        return hausdorff_distance_loss(pred, label)
