@@ -68,9 +68,10 @@ class RandomDeepFlip(T.RandomHorizontalFlip):
 
 
 class RandomResizedCrop(Module):
-    def __init__(self, size, scale=(0.08, 1.0), interpolation=InterpolationMode.BILINEAR):
+    def __init__(self, size, scale=(0.08, 1.0), interpolation=InterpolationMode.BILINEAR,interpolations=[]):
         super().__init__()
         self.size = size
+        self.interpolations = interpolations
 
         if not isinstance(scale, Sequence):
             raise TypeError("Scale should be a sequence")
@@ -91,14 +92,17 @@ class RandomResizedCrop(Module):
         x = random.randint(0, width - w)
         y = random.randint(0, height - h)
         z = random.randint(0, deep - d)
-        return [TF3D.resize(TF3D.crop(_, z, d, y, h, x, w), self.size) for _ in args]
+        if len(self.interpolations) == 0:
+            return [TF3D.resize(TF3D.crop(_, z, d, y, h, x, w), self.size,self.interpolation) for _ in args]
+        else:
+            return [TF3D.resize(TF3D.crop(_, z, d, y, h, x, w), self.size,interpolation) for _,interpolation in zip(args,self.interpolations)]
 
 
 class RandomRotation(Module):
     """
     Random rotate 3D objects at 3 axis:x,y,z
     """
-    def __init__(self, degrees: Tuple[int, int, int], interpolation=InterpolationMode.BILINEAR, expand=False) -> None:
+    def __init__(self, degrees: Tuple[int, int, int], interpolation=InterpolationMode.BILINEAR, expand=False,interpolations=[]) -> None:
         """
         Args::
             degrees:The max value for rotate angel in x,y,z axis.Use [360,360,360] for any angle.
@@ -110,19 +114,22 @@ class RandomRotation(Module):
         self.degrees       = degrees
         self.interpolation = interpolation
         self.expand        = expand
+        self.interpolations = interpolations
 
     def forward(self, *args) -> list[Tensor]:
         x_theta = random.random() * self.degrees[0]
         y_theta = random.random() * self.degrees[0]
         z_theta = random.random() * self.degrees[0]
-        return [TF3D.rotate(_, (x_theta, y_theta, z_theta), self.interpolation, expand=self.expand) for _ in args]
-
+        if len(self.interpolations):
+            return [TF3D.rotate(_, (x_theta, y_theta, z_theta), self.interpolation, expand=self.expand) for _ in args]
+        else:
+            return [TF3D.rotate(_, (x_theta, y_theta, z_theta), interpolation, expand=self.expand) for _,interpolation in zip(args,self.interpolations)]
 
 class ElasticDeformation(Module):
     """
     A random elastic deformation transformation which applied to the image.
     """
-    def __init__(self, grids_size: Tuple[int, int, int], sigma: float):
+    def __init__(self, grids_size: Tuple[int, int, int], sigma: float,interpolation=InterpolationMode.BILINEAR,interpolations=[]):
         """
         Args::
             grids_size:The shape of grid which guide elastic deformation transformation.The smaller grid there is the smoother the deformation changes.
@@ -131,11 +138,16 @@ class ElasticDeformation(Module):
         super().__init__()
         self.grids_size = list(grids_size)
         self.sigma = sigma
+        self.interpolation = interpolation
+        self.interpolations = interpolations
 
     def forward(self, *args) -> list:
         d, h, w = TF3D._get_image_size(args[0])
         grid = self._getgrid(d, h, w)
-        return [self._elasticdeformation(_, grid) for _ in args]
+        if len(self.interpolations)==0:
+            return [self._elasticdeformation(_, grid,self.interpolation) for _ in args]    
+        else:
+            return [self._elasticdeformation(_, grid,interpolation) for _,interpolation in zip(args,self.interpolations)]
 
     def _getgrid(self, d, h, w):
         grid = self.sigma * torch.randn([3] + self.grids_size)
@@ -147,5 +159,11 @@ class ElasticDeformation(Module):
         xy = torch.stack(torch.meshgrid(x, y, z)).permute(3, 2, 1, 0).unsqueeze(0)
         return grid + xy
 
-    def _elasticdeformation(self, img: Tensor, grid: Tensor):
-        return torch.grid_sampler(img.unsqueeze(0), grid, 2, 0, True)[0]
+    def _elasticdeformation(self, img: Tensor, grid: Tensor,interpolation):
+        if interpolation == "bilinear":
+            mode_enum = 0
+        elif interpolation == "nearest":
+            mode_enum = 1
+        else:  # mode == 'bicubic'
+            mode_enum = 2
+        return torch.grid_sampler(img.unsqueeze(0), grid, mode_enum, 0, True)[0]

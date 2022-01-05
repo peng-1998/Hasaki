@@ -47,12 +47,32 @@ class RandomHorizontalFlip(T.RandomHorizontalFlip):
 
 
 class RandomResizedCrop(T.RandomResizedCrop):
+    def __init__(self, size, scale=..., ratio=...,interpolation=..., interpolations:List=[]):
+        '''
+        The only parameter different with torchvision.transforms.RandomResizedCrop is we use \'interpolations\' apply in input images use same indexes.
+        If \'interpolations\' is an empty array,it will apply parameter \'interpolation\' for each input image.
+        If not,the parameter \'interpolations\''s should have the same lenght with input image.
+        '''
+        super().__init__(size, scale=scale, ratio=ratio,interpolation=interpolation)
+        self.interpolations = interpolations
     def forward(self, *args) -> list:
         i, j, h, w = self.get_params(args[0], self.scale, self.ratio)
-        return [TF.resized_crop(_, i, j, h, w, self.size, self.interpolation) for _ in args]
+        if len(self.interpolations) == 0:
+            return [TF.resized_crop(_, i, j, h, w, self.size, self.interpolation) for _ in args]
+        else:
+            return [TF.resized_crop(_, i, j, h, w, self.size, interpolation) for _,interpolation in zip(args,self.interpolations)]
 
 
 class RandomAffine(T.RandomAffine):
+    def __init__(self, degrees, translate=None, scale=None, shear=None, interpolation=..., fill=0, fillcolor=None, resample=None,interpolations=[]):
+        '''
+        The only parameter different with torchvision.transforms.RandomAffine is we use \'interpolations\' apply in input images use same indexes.
+        If \'interpolations\' is an empty array,it will apply parameter \'interpolation\' for each input image.
+        If not,the parameter \'interpolations\''s should have the same lenght with input image.
+        '''
+        super().__init__(degrees, translate=translate, scale=scale, shear=shear, interpolation=interpolation, fill=fill, fillcolor=fillcolor, resample=resample)
+        assert isinstance(interpolations,List)
+        self.interpolations = interpolations
     def forward(self, *args) -> list:
         fill = self.fill
         fills = []
@@ -66,11 +86,20 @@ class RandomAffine(T.RandomAffine):
         img_size = TF._get_image_size(args[0])
 
         ret = self.get_params(self.degrees, self.translate, self.scale, self.shear, img_size)
-
-        return [TF.affine(args[i], *ret, interpolation=self.interpolation, fill=fills[i]) for i in range(len(args))]
-
+        if len(self.interpolations)==0:
+            return [TF.affine(args[i], *ret, interpolation=self.interpolation, fill=fills[i]) for i in range(len(args))]
+        else:
+            return [TF.affine(args[i], *ret, interpolation=self.interpolations[i], fill=fills[i]) for i in range(len(args))]
 
 class RandomRotation(T.RandomRotation):
+    def __init__(self, degrees, interpolation=..., expand=False, center=None, fill=0, resample=None, interpolations=[]):
+        '''
+        The only parameter different with torchvision.transforms.RandomRotation is we use \'interpolations\' apply in input images use same indexes.
+        If \'interpolations\' is an empty array,it will apply parameter \'interpolation\' for each input image.
+        If not,the parameter \'interpolations\''s should have the same lenght with input image.
+        '''
+        super().__init__(degrees, interpolation=interpolation, expand=expand, center=center, fill=fill, resample=resample)
+        self.interpolations = interpolations
     def forward(self, *args) -> list:
         fill = self.fill
         fills = []
@@ -81,24 +110,31 @@ class RandomRotation(T.RandomRotation):
                 else:
                     fills.append([float(f) for f in fill])
 
-        img_size = TF._get_image_size(args[0])
-
         angle = self.get_params(self.degrees)
-
-        return [TF.rotate(args[i], angle, self.resample, self.expand, self.center, fills[i]) for i in range(len(args))]
-
+        if len(self.interpolations)==0:
+            return [TF.rotate(args[i], angle, self.resample, self.expand, self.center, fills[i],interpolation=self.interpolation) for i in range(len(args))]
+        else:
+            return [TF.rotate(args[i], angle, self.resample, self.expand, self.center, fills[i],interpolation=self.interpolations[i]) for i in range(len(args))]
 
 class ElasticDeformation(Module):
-    def __init__(self, grids_size: Tuple[int, int], sigma: float):
+    def __init__(self, grids_size: Tuple[int, int], sigma: float,interpolation=TF.InterpolationMode.BILINEAR,interpolations=[]):
+        '''
+        If \'interpolations\' is an empty array,it will apply parameter \'interpolation\' for each input image.
+        If not,the parameter \'interpolations\''s should have the same lenght with input image.
+        '''
         super().__init__()
         self.grids_size = list(grids_size)
         self.sigma = sigma
+        self.interpolations = interpolations
+        self.interpolation = interpolation
 
     def forward(self, *args) -> list:
         w, h = TF._get_image_size(args[0])
         grid = self._getgrid(w, h)
-        return [self._elasticdeformation(_, grid) for _ in args]
-
+        if len(self.interpolations) == 0:
+            return [self._elasticdeformation(_, grid,self.interpolation) for _ in args]
+        else:
+            return [self._elasticdeformation(_, grid,interpolation) for _,interpolation in zip(args,self.interpolations)]
     def _getgrid(self, w, h):
         grid = self.sigma * torch.randn([2] + self.grids_size).unsqueeze(0)
         grid = TF.resize(grid, (h, w)).permute(0, 2, 3, 1)
@@ -108,12 +144,18 @@ class ElasticDeformation(Module):
         xy = torch.stack(torch.meshgrid(x, y)).permute(2, 1, 0).unsqueeze(0)
         return grid + xy
 
-    def _elasticdeformation(self, img, grid: Tensor):
+    def _elasticdeformation(self, img, grid: Tensor,interpolation):
         if isinstance(img, (Image.Image, numpy.ndarray)):
             image = TF.to_tensor(img)
         else:
             image = img
-        image = torch.grid_sampler(image.unsqueeze(0), grid, 2, 0, True)[0]
+        if interpolation == "bilinear":
+            mode_enum = 0
+        elif interpolation == "nearest":
+            mode_enum = 1
+        else:  # mode == 'bicubic'
+            mode_enum = 2
+        image = torch.grid_sampler(image.unsqueeze(0), grid, mode_enum, 0, True)[0]
         if isinstance(img, torch.Tensor):
             return image
         if isinstance(img, numpy.ndarray):

@@ -21,7 +21,7 @@ def to_tensor(img: numpy.ndarray) -> Tensor:
         return torch.tensor(img).permute(3, 2, 1, 0).contiguous()
     return to_tensor(torch.tensor(img).unsqueeze(3))
 
-def resize(img: Tensor, size: Tuple[int, int, int]) -> Tensor:
+def resize(img: Tensor, size: Tuple[int, int, int],interpolation=InterpolationMode.BILINEAR) -> Tensor:
     assert len(img.shape) == 4 and len(size) == 3
     deep, height, width = _get_image_size(img)
     m = torch.tensor([[
@@ -30,7 +30,13 @@ def resize(img: Tensor, size: Tuple[int, int, int]) -> Tensor:
         [0           , 0             , size[2]/width, 0]
     ]])
     grid = F.affine_grid(m, size, True)
-    return torch.grid_sampler(img.unsqueeze(0), grid, 0, 0, True)[0]
+    if interpolation == "bilinear":
+        mode_enum = 0
+    elif interpolation == "nearest":
+        mode_enum = 1
+    else:  # mode == 'bicubic'
+        mode_enum = 2
+    return torch.grid_sampler(img.unsqueeze(0), grid, mode_enum, 0, True)[0]
 
 
 def rotate(img, angles: Tuple[float, float, float], interpolation=InterpolationMode.BILINEAR, expand=False) -> Tensor:
