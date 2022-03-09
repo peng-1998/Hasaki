@@ -1,14 +1,14 @@
-from typing import List, Tuple, Union
 import numpy
-from torch.functional import Tensor
-import torchvision.transforms.functional as TF
-import torchvision.transforms as T
 import torch
-import torch.nn.functional as F
-from torch.nn import Module
-from torchvision.transforms.transforms import RandomRotation, RandomVerticalFlip
 from PIL import Image
+from torch.nn import Module
+import torch.nn.functional as F
+import torchvision.transforms as T
+from torch.functional import Tensor
+from typing import List, Tuple, Union
 from .functional2D import erosion, dilate
+import torchvision.transforms.functional as TF
+from torchvision.transforms.transforms import RandomRotation, RandomVerticalFlip
 
 
 class RandomCrop(T.RandomCrop):

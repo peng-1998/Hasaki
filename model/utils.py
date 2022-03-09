@@ -1,9 +1,9 @@
-from typing import List
 import torch
-from torch.functional import Tensor
 import torch.nn as nn
-import torch.nn.functional as F
+from typing import List
 from torch.nn import Module
+import torch.nn.functional as F
+from torch.functional import Tensor
 
 
 class unet_like(Module):

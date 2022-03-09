@@ -1,6 +1,6 @@
-from typing import Optional
-from torch import Tensor
 import torch
+from torch import Tensor
+from typing import Optional
 import torch.nn.functional as F
 from scipy.ndimage import distance_transform_edt
 

@@ -4,3 +4,4 @@ from . import score
 from . import model
 from . import loss
 from . import utils
+from . import visualization

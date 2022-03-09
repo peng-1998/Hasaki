@@ -1,8 +1,8 @@
 import torch
-from torch.functional import Tensor
 import torch.nn as nn
-from .utils import unet_like
 from torch.nn import Module
+from .utils import unet_like
+from torch.functional import Tensor
 
 
 class Unet_2D_with_any_layer(unet_like):

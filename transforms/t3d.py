@@ -1,13 +1,13 @@
-from typing import List, Sequence, Tuple, Union
-import warnings
 import torch
-from torch.functional import Tensor
+import random
+import warnings
 from torch.nn import Module
 import torch.nn.functional as F
-from torchvision.transforms.functional import InterpolationMode, _interpolation_modes_from_int
 from . import functional3D as TF3D
 import torchvision.transforms as T
-import random
+from torch.functional import Tensor
+from typing import List, Sequence, Tuple, Union
+from torchvision.transforms.functional import InterpolationMode, _interpolation_modes_from_int
 
 'for all 3D images dim = (channel,deep,height,width)'
 

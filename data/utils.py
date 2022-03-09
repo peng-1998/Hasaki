@@ -1,21 +1,21 @@
 import os
-from typing import Any, Callable, Generator, List, Optional, Sequence, Tuple
+import wget
+import gzip
+import torch
+import gdown
+import kaggle
+import shutil
 import zipfile
 import tarfile
 import hashlib
-import torch
-from torch.functional import Tensor
-from torch.utils.data.dataset import Dataset, Subset
-from tqdm.std import tqdm
-import wget
-import gdown
-from PIL import Image, ImageDraw
-import xml.dom.minidom
 import numpy as np
 import urllib.request
-import kaggle
-import gzip
-import shutil
+import xml.dom.minidom
+from tqdm.std import tqdm
+from PIL import Image, ImageDraw
+from torch.functional import Tensor
+from torch.utils.data.dataset import Dataset, Subset
+from typing import Any, Callable, Generator, List, Optional, Sequence, Tuple
 
 
 def google_ping_test():

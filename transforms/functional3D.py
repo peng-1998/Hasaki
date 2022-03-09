@@ -1,10 +1,10 @@
-from typing import List, Tuple
+import math
 import torch
-from torch import Tensor
 import numpy
+from torch import Tensor
+from typing import List, Tuple
 import torch.nn.functional as F
 from torchvision.transforms.functional import InterpolationMode
-import math
 
 
 def _get_image_size(img: Tensor) -> List[int]:

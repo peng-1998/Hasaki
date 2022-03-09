@@ -1,7 +1,7 @@
-import json
-from typing import Dict
 import os
+import json
 import time
+from typing import Dict
 
 
 class Logger:

@@ -1,9 +1,9 @@
-from typing import List, Tuple
 import torch
 from torch import Tensor
+from typing import List, Tuple
+import torch.nn.functional as F
 from scipy.ndimage import label as bmap_label
 from scipy.ndimage import distance_transform_edt
-import torch.nn.functional as F
 
 def rand_error(input: Tensor, target: Tensor) -> float:
     """

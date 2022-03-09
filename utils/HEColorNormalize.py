@@ -1,10 +1,10 @@
-from typing import Union
 import torch
 from PIL import Image
+from typing import Union
+from torchnmf.nmf import NMF
 from torch.functional import Tensor
 from torch.nn.modules.module import Module
 import torchvision.transforms.functional as TF
-from torchnmf.nmf import NMF
 
 
 class HE_ColorNormalization(Module):

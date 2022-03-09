@@ -1,18 +1,18 @@
-import os, json
-import shutil
-from typing import Callable, Optional, Tuple, Union
+import git
 import torch
-from torch.utils.data import Dataset
+import shutil
+import os, json
+import numpy as np
 from .utils import *
 from glob import glob
 from PIL import Image
-from torch import Tensor
-import torchvision.transforms.functional as TF
 import nibabel as nib
-import numpy as np
-from scipy.io import loadmat
+from torch import Tensor
 from PIL import ImageFile
-import git
+from scipy.io import loadmat
+from torch.utils.data import Dataset
+import torchvision.transforms.functional as TF
+from typing import Callable, Optional, Tuple, Union
 
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
