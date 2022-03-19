@@ -1,21 +1,17 @@
-import os
-import wget
 import gzip
-import torch
-import gdown
-import kaggle
-import shutil
-import zipfile
-import tarfile
 import hashlib
-import numpy as np
+import os
+import shutil
+import tarfile
 import urllib.request
-import xml.dom.minidom
-from tqdm.std import tqdm
+import zipfile
+from typing import Any, Callable, List, Sequence, Tuple
+
+import numpy as np
+import torch
 from PIL import Image, ImageDraw
 from torch.functional import Tensor
-from torch.utils.data.dataset import Dataset, Subset
-from typing import Any, Callable, Generator, List, Optional, Sequence, Tuple
+from torch.utils.data.dataset import Dataset
 
 
 def google_ping_test():
@@ -28,18 +24,22 @@ def google_ping_test():
 
 
 def download_data_from_url(url, root):
+    import wget
     wget.download(url, os.path.join(root, url.split('/')[-1]))
 
 
 def download_data_from_url_with_path(url, path):
+    import wget
     wget.download(url, path)
 
 
 def download_data_from_kaggle_competition(competition, root):
+    import kaggle
     kaggle.api.competition_download_files(competition, root)
 
 
 def download_data_from_kaggle_dataset(dataset, root):
+    import kaggle
     kaggle.api.dataset_download_files(dataset, root)
 
 
@@ -68,6 +68,7 @@ def chack_file_with_md5(file_name, md5):
 def download_data_from_google_drive(url, path):
     if not google_ping_test():
         print('Can not connect to google,may you should set proxy')
+    import gdown
     gdown.download(url, output=path)
 
 
@@ -80,6 +81,7 @@ def polygon2mask_default(w: int, h: int, polygons: list) -> Image.Image:
 
 def xml_to_binary_mask(w, h, filename: str, polygon2mask=polygon2mask_default) -> Image.Image:
     xml_file = filename
+    import xml.dom.minidom
     xDoc = xml.dom.minidom.parse(xml_file).documentElement
     Regions = xDoc.getElementsByTagName('Region')
     xy = []
@@ -120,29 +122,31 @@ def ungz_file(gz_src: str, dst_dir: str):
 
 
 from torch.utils.data import random_split as rsp
+
+
 class Subset_with_T(Dataset):
+
     def __init__(self, dataset: Dataset) -> None:
         super().__init__()
-        self.dataset =dataset
+        self.dataset = dataset
         self.transforms = None
 
-    def set_transforms(self,transforms:Callable):
+    def set_transforms(self, transforms: Callable):
         self.transforms = transforms
 
     def __getitem__(self, index) -> Any:
         if self.transforms is not None:
             data = self.dataset[index]
-            if isinstance(data,(Tuple,List)):
+            if isinstance(data, (Tuple, List)):
                 return self.transforms(*data)
             else:
                 return self.transforms(data)
         return self.dataset[index]
-    
+
     def __len__(self):
         return len(self.dataset)
 
 
-
 def random_split(dataset: Dataset, lengths: Sequence[int]) -> List[Subset_with_T]:
-    subsets = rsp(dataset,lengths)
+    subsets = rsp(dataset, lengths)
     return tuple([Subset_with_T(_) for _ in subsets])

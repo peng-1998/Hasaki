@@ -116,7 +116,7 @@ class RandomRotation(Module):
         self.expand        = expand
         self.interpolations = interpolations
 
-    def forward(self, *args) -> list[Tensor]:
+    def forward(self, *args) -> List[Tensor]:
         x_theta = random.random() * self.degrees[0]
         y_theta = random.random() * self.degrees[0]
         z_theta = random.random() * self.degrees[0]

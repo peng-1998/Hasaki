@@ -5,6 +5,7 @@ import torch.nn.functional as F
 from scipy.ndimage import label as bmap_label
 from scipy.ndimage import distance_transform_edt
 
+
 def rand_error(input: Tensor, target: Tensor) -> float:
     """
     This indicator computes the rand error between input and target.
@@ -26,7 +27,7 @@ def rand_error(input: Tensor, target: Tensor) -> float:
     """
 
     assert isinstance(input, Tensor) and isinstance(target, Tensor) and input.shape == target.shape
-    n = torch.prod(torch.tensor(input.shape)).item()
+    n = input.numel()
     m = (input == target).sum().item()
     return 2 * (n - m) * m / n / (n - 1)
 
@@ -60,8 +61,8 @@ def F1_score(input: Tensor, target: Tensor) -> float:
     """
 
     assert isinstance(input, Tensor) and isinstance(target, Tensor) and input.shape == target.shape
-    pl   = input + target
-    tp   = (pl == 2).sum().item()
+    pl = input + target
+    tp = (pl == 2).sum().item()
     fpfn = (pl == 1).sum().item()
     return tp / (tp + 0.5 * fpfn + 1e-6)
 
@@ -87,8 +88,8 @@ def IoU(input: Tensor, target: Tensor) -> float:
     """
 
     assert isinstance(input, Tensor) and isinstance(target, Tensor) and input.shape == target.shape
-    pl   = input + target
-    tp   = (pl == 2).sum().item()
+    pl = input + target
+    tp = (pl == 2).sum().item()
     fpfn = (pl == 1).sum().item()
     return tp / (tp + fpfn + 1e-6)
 
@@ -128,11 +129,11 @@ def AJI_For_Binary_Map(input: Tensor, target: Tensor) -> float:
     assert input.shape == target.shape and len(input.shape) == 3
     score = 0
     for i in range(input.shape[0]):
-        (input_objs, _)   = bmap_label(input[i].cpu().numpy())
-        input_objs        = torch.tensor(input_objs).to(torch.long).to(input.device)
-        (target_objs, _)  = bmap_label(target[i].cpu().numpy())
-        target_objs       = torch.tensor(target_objs).to(torch.long).to(input.device)
-        score           += _aji(input_objs, target_objs)
+        (input_objs, _) = bmap_label(input[i].cpu().numpy())
+        input_objs = torch.tensor(input_objs).to(torch.long).to(input.device)
+        (target_objs, _) = bmap_label(target[i].cpu().numpy())
+        target_objs = torch.tensor(target_objs).to(torch.long).to(input.device)
+        score += _aji(input_objs, target_objs)
     return score / input.shape[0]
 
 
@@ -149,10 +150,10 @@ def AJI(input: Tensor, target: Tensor) -> float:
     Return::
         Return a float between 0 and 1.
     """
-    
+
     assert input.shape == target.shape and len(input.shape) == 3
     score = 0
-    input  = input.to(torch.long)
+    input = input.to(torch.long)
     target = target.to(torch.long)
     for i in range(input.shape[0]):
         score += _aji(input[i], target[i])
@@ -160,22 +161,22 @@ def AJI(input: Tensor, target: Tensor) -> float:
 
 
 def _aji(input: Tensor, target: Tensor) -> float:
-    device              = input.device
-    input_objs           = torch._C._nn.one_hot(input, num_classes=input.max() + 1).permute(2, 0, 1)[1:].to(device)
-    target_objs          = torch._C._nn.one_hot(target, num_classes=target.max() + 1).permute(2, 0, 1)[1:].to(device)
-    input_objs           = input_objs.unsqueeze(1).to(torch.float32)
-    target_objs          = target_objs.unsqueeze(1).to(torch.float32)
+    device = input.device
+    input_objs = torch._C._nn.one_hot(input, num_classes=input.max() + 1).permute(2, 0, 1)[1:].to(device)
+    target_objs = torch._C._nn.one_hot(target, num_classes=target.max() + 1).permute(2, 0, 1)[1:].to(device)
+    input_objs = input_objs.unsqueeze(1).to(torch.float32)
+    target_objs = target_objs.unsqueeze(1).to(torch.float32)
     if input_objs.shape[0] == 0:
         return 0
-    ands                = F.conv2d(target_objs, input_objs).squeeze(-1).squeeze(-1)
-    ors                 = torch.prod(torch.tensor(input.shape)) - F.conv2d(1 - target_objs, 1 - input_objs).squeeze(-1).squeeze(-1)
-    ious                = ands / ors
-    (_,index)           = ious.max(dim=-1)
-    index_              = torch._C._nn.one_hot(index, input.max())
-    C                   = (index_ * ands).sum()
-    U                   = (index_ * ors).sum()
-    index               = index.unique(sorted=False)
-    U                  += (input != 0).sum() - torch.index_select(input_objs, dim=0, index=index).sum() + 1e-6
+    ands = (target_objs * input_objs.squeeze(1)).sum([-2, -1])
+    ors = input.numel() - (1 - target_objs) * (1 - input_objs).squeeze(1).sum([-2, -1])
+    ious = ands / ors
+    (_, index) = ious.max(dim=-1)
+    index_ = torch._C._nn.one_hot(index, input.max())
+    C = (index_ * ands).sum()
+    U = (index_ * ors).sum()
+    index = index.unique(sorted=False)
+    U += (input != 0).sum() - torch.index_select(input_objs, dim=0, index=index).sum() + 1e-6
     return (C / U).item()
 
 
@@ -200,7 +201,7 @@ def accuracy(input: Tensor, target: Tensor) -> float:
     """
 
     assert input.shape == target.shape
-    return ((input == target).sum() / torch.prod(torch.tensor(input.shape))).item()
+    return ((input == target).sum() / input.numel()).item()
 
 
 def precision(input: Tensor, target: Tensor) -> float:
@@ -314,14 +315,14 @@ def Hausdorff_Distance(input: Tensor, target: Tensor) -> float:
 
     distances = []
     for i in range(input.shape[0]):
-        edge_input       = get_edge(input[i])
-        edge_lable       = get_edge(target[i])
-        dist_input       = get_dist_map(input[i])
-        dist_lable       = get_dist_map(target[i])
-        input_edge_dist  = edge_input * dist_lable
+        edge_input = get_edge(input[i])
+        edge_lable = get_edge(target[i])
+        dist_input = get_dist_map(input[i])
+        dist_lable = get_dist_map(target[i])
+        input_edge_dist = edge_input * dist_lable
         target_edge_dist = edge_lable * dist_input
-        max_input_dist   = input_edge_dist.max()
-        max_target_dist  = target_edge_dist.max()
+        max_input_dist = input_edge_dist.max()
+        max_target_dist = target_edge_dist.max()
         distances.append(max_target_dist if max_target_dist > max_input_dist else max_input_dist)
     return torch.stack(distances).mean().item()
 
@@ -341,21 +342,21 @@ def Hausdorff_Distance_95(input: Tensor, target: Tensor) -> float:
     """
     distances = []
     for i in range(input.shape[0]):
-        edge_input          = get_edge(input[i])
-        edge_lable          = get_edge(target[i])
-        dist_input          = get_dist_map(input[i])
-        dist_lable          = get_dist_map(target[i])
-        input_edge_dist     = edge_input * dist_lable
-        target_edge_dist    = edge_lable * dist_input
-        (max_input_dist,_)  = input_edge_dist.topk(k=int((edge_input.sum()/20).item()))
-        (max_target_dist,_) = target_edge_dist.topk(k=int((edge_lable.sum()/20).item()))
+        edge_input = get_edge(input[i])
+        edge_lable = get_edge(target[i])
+        dist_input = get_dist_map(input[i])
+        dist_lable = get_dist_map(target[i])
+        input_edge_dist = edge_input * dist_lable
+        target_edge_dist = edge_lable * dist_input
+        (max_input_dist, _) = input_edge_dist.topk(k=int((edge_input.sum() / 20).item()))
+        (max_target_dist, _) = target_edge_dist.topk(k=int((edge_lable.sum() / 20).item()))
         distances.append(max_target_dist[-1] if max_target_dist[-1] > max_input_dist[-1] else max_input_dist[-1])
     return torch.stack(distances).mean().item()
 
 
 def get_dist_map(map: Tensor):
     assert len(map.shape) < 4
-    np_map   = map.cpu().numpy()
+    np_map = map.cpu().numpy()
     dist_map = distance_transform_edt(1 - np_map)
     return torch.Tensor(dist_map, device=map.device)
 
@@ -363,37 +364,17 @@ def get_dist_map(map: Tensor):
 def get_edge(map: Tensor) -> Tensor:
     assert len(map.shape) < 4
     if len(map.shape) == 3:
-        kernel = [
-            [
-                [0,0,0],
-                [0,1,0],
-                [0,0,0]
-            ],
-            [
-                [0,1,0],
-                [1,1,1],
-                [0,1,0]
-            ],
-            [
-                [0,0,0],
-                [0,1,0],
-                [0,0,0]
-            ]
-        ]
+        kernel = [[[0, 0, 0], [0, 1, 0], [0, 0, 0]], [[0, 1, 0], [1, 1, 1], [0, 1, 0]], [[0, 0, 0], [0, 1, 0], [0, 0, 0]]]
         kernel = torch.tensor(kernel).view(1, 1, 3, 3, 3).to(map.device)
-        map    = map.unsqueeze(0).unsqueeze(0)
-        map_   = 1.0*(F.conv3d(map,kernel,padding=1)==kernel.sum())
-        edge   = map - map_
+        map = map.unsqueeze(0).unsqueeze(0)
+        map_ = 1.0 * (F.conv3d(map, kernel, padding=1) == kernel.sum())
+        edge = map - map_
     else:
-        kernel = [
-            [0,1,0],
-            [1,1,1],
-            [0,1,0]
-        ]
+        kernel = [[0, 1, 0], [1, 1, 1], [0, 1, 0]]
         kernel = torch.tensor(kernel).view(1, 1, 3, 3).to(map.device)
-        map    = map.unsqueeze(0).unsqueeze(0)
-        map_   = 1.0*(F.conv2d(map,kernel,padding=1)==kernel.sum())
-        edge   = map - map_
+        map = map.unsqueeze(0).unsqueeze(0)
+        map_ = 1.0 * (F.conv2d(map, kernel, padding=1) == kernel.sum())
+        edge = map - map_
     return edge
 
 
@@ -413,17 +394,17 @@ def ASD(input: Tensor, target: Tensor) -> float:
 
     distances = []
     for i in range(input.shape[0]):
-        edge_input       = get_edge(input[i])
-        edge_lable       = get_edge(target[i])
-        dist_input       = get_dist_map(input[i])
-        dist_lable       = get_dist_map(target[i])
-        input_edge_dist  = edge_input * dist_lable
+        edge_input = get_edge(input[i])
+        edge_lable = get_edge(target[i])
+        dist_input = get_dist_map(input[i])
+        dist_lable = get_dist_map(target[i])
+        input_edge_dist = edge_input * dist_lable
         target_edge_dist = edge_lable * dist_input
         distances.append((input_edge_dist.sum() + target_edge_dist.sum()) / (edge_lable.sum() + edge_input.sum()))
     return torch.stack(distances).mean().item()
 
 
-def Surface_overlap(input: Tensor, target: Tensor, eps:float = 1.415) -> Tuple[float, float]:
+def Surface_overlap(input: Tensor, target: Tensor, eps: float = 1.415) -> Tuple[float, float]:
     """
     This indicator computes the surface overlap rate between input and target.
 
@@ -441,18 +422,18 @@ def Surface_overlap(input: Tensor, target: Tensor, eps:float = 1.415) -> Tuple[f
     distances_i_t = []
     distances_t_i = []
     for i in range(input.shape[0]):
-        edge_input       = get_edge(input[i])
-        edge_target      = get_edge(target[i])
-        dist_input       = get_dist_map(input[i])
-        dist_target      = get_dist_map(target[i])
-        input_edge_dist  = edge_input * dist_target
+        edge_input = get_edge(input[i])
+        edge_target = get_edge(target[i])
+        dist_input = get_dist_map(input[i])
+        dist_target = get_dist_map(target[i])
+        input_edge_dist = edge_input * dist_target
         target_edge_dist = edge_target * dist_input
         distances_i_t.append((input_edge_dist < eps).sum() / edge_input.sum())
         distances_t_i.append((target_edge_dist < eps).sum() / edge_target.sum())
-    return torch.stack(distances_i_t).mean().item(),torch.stack(distances_t_i).mean().item()
+    return torch.stack(distances_i_t).mean().item(), torch.stack(distances_t_i).mean().item()
 
 
-def Surface_dice(input: Tensor, target: Tensor, eps:float = 1.415) -> float:
+def Surface_dice(input: Tensor, target: Tensor, eps: float = 1.415) -> float:
     """
     This indicator computes the surface dice between input and target.
 
@@ -469,11 +450,11 @@ def Surface_dice(input: Tensor, target: Tensor, eps:float = 1.415) -> float:
 
     dice = []
     for i in range(input.shape[0]):
-        edge_input       = get_edge(input[i])
-        edge_target      = get_edge(target[i])
-        dist_input       = get_dist_map(input[i])
-        dist_target      = get_dist_map(target[i])
-        input_edge_dist  = edge_input * dist_target
+        edge_input = get_edge(input[i])
+        edge_target = get_edge(target[i])
+        dist_input = get_dist_map(input[i])
+        dist_target = get_dist_map(target[i])
+        input_edge_dist = edge_input * dist_target
         target_edge_dist = edge_target * dist_input
         dice.append(((input_edge_dist < eps).sum() + (target_edge_dist < eps).sum()) / (edge_input.sum() + edge_target.sum()))
     return torch.stack(dice).mean().item()

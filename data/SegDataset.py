@@ -1,18 +1,16 @@
-import git
-import torch
+import os
 import shutil
-import os, json
-import numpy as np
-from .utils import *
 from glob import glob
-from PIL import Image
-import nibabel as nib
-from torch import Tensor
-from PIL import ImageFile
-from scipy.io import loadmat
-from torch.utils.data import Dataset
-import torchvision.transforms.functional as TF
 from typing import Callable, Optional, Tuple, Union
+
+import nibabel as nib
+import numpy as np
+import torchvision.transforms.functional as TF
+from PIL import Image, ImageFile
+from torch import Tensor
+from torch.utils.data import Dataset
+
+from .utils import *
 
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
@@ -405,6 +403,7 @@ class KITS_2019(Dataset):
             print('Datas are already exist,cancel download.')
             return
         print('Downloading masks...')
+        import git
         with git.Repo.init(path=self.root) as repo:
             repo.clone_from(KITS_2019.segmentation_url, os.path.join(self.root, 'kits19'))
         for i in range(KITS_2019.num_data):
@@ -1794,6 +1793,7 @@ class CoNSeP(Dataset):
             self.data = [(_, os.path.join(masks, os.path.basename(_).replace('png', 'mat'))) for _ in images]
 
     def __getitem__(self, index) -> Tuple[Tensor, Tensor]:
+        from scipy.io import loadmat
         img, mask = self.data[index]
         img, mask = Image.open(img), Image.fromarray(loadmat(mask)['type_map'])
         if self.transform is not None:
@@ -2325,6 +2325,7 @@ class ISBI_2012_EM_stacks(Dataset):
         if os.path.exists(os.path.join(self.root, self.mode)):
             print('Datas are already exist,cancel download.')
             return
+        import git
         with git.Repo.init(path=self.root) as repo:
             print('Downloading data ...')
             repo.clone_from(ISBI_2012_EM_stacks.data_url, os.path.join(self.root, 'unet'))

@@ -1,10 +1,10 @@
-import torch
-from PIL import Image
 from typing import Union
-from torchnmf.nmf import NMF
+
+import torch
+import torchvision.transforms.functional as TF
+from PIL import Image
 from torch.functional import Tensor
 from torch.nn.modules.module import Module
-import torchvision.transforms.functional as TF
 
 
 class HE_ColorNormalization(Module):
@@ -15,6 +15,7 @@ class HE_ColorNormalization(Module):
     \min _{W, H} \frac{1}{2}\|V-W H\|_{F}^{2}+\lambda \sum_{j=1}^{r}\|H(j,)\|_{1}, W, H \geq 0
     $$
     '''
+
     def __init__(self, target_img: str = None, use_cuda: bool = False, W_target: Tensor = None, r: int = 2, Lambda: float = 0.1) -> None:
         '''
         Args:
@@ -26,6 +27,7 @@ class HE_ColorNormalization(Module):
         '''
         super().__init__()
         assert target_img or W_target
+        from torchnmf.nmf import NMF
         self.r = r * 2
         self.Lambda = Lambda
 
@@ -44,6 +46,7 @@ class HE_ColorNormalization(Module):
             self.Ht_RM = torch.quantile(nmft.W.data, 0.99)
 
     def forward(self, pic: Union[Tensor, Image.Image]) -> Union[Tensor, Image.Image]:
+        from torchnmf.nmf import NMF
         if isinstance(pic, Tensor):
             assert pic.shape[0] == 3
             source_img_size = pic.shape
