@@ -1,11 +1,12 @@
-import torch
-from torch import Tensor
 from typing import Optional
+
+import torch
 import torch.nn.functional as F
-from scipy.ndimage import distance_transform_edt
+from torch import Tensor
 
 
 class DiceLoss(torch.nn.Module):
+
     def __init__(self, weight: Tensor = None, batch_dice: bool = True, square: bool = False, smooth: float = 1) -> None:
         '''
         Args:
@@ -25,12 +26,14 @@ class DiceLoss(torch.nn.Module):
 
 
 class IoULoss(DiceLoss):
+
     def forward(self, pred: Tensor, label: Tensor, weight: Tensor = 1) -> Tensor:
         D = super().forward(pred, label, weight)
         return 2 * D / (1 + D)
 
 
 class WeightCrossEntropyLoss(torch.nn.CrossEntropyLoss):
+
     def __init__(self, weight: Optional[Tensor] = None, size_average=None, ignore_index: int = -100, reduction: str = 'mean', label_smoothing: float = 0) -> None:
         super().__init__(size_average=size_average, ignore_index=ignore_index, reduce=False, label_smoothing=label_smoothing)
         self.weight_map = weight
@@ -77,6 +80,7 @@ def focal_loss(pred: Tensor, label: Tensor, alpha: float = 0.25, gamma: float = 
 
 
 class FocalLoss(torch.nn.Module):
+
     def __init__(self, alpha: float = 0.25, gamma: float = 2) -> None:
         super().__init__()
         assert alpha > 0 and gamma >= 0
@@ -88,6 +92,7 @@ class FocalLoss(torch.nn.Module):
 
 
 class TopKLoss(torch.nn.CrossEntropyLoss):
+
     def __init__(self, weight: Optional[Tensor] = None, ignore_index: int = -100, k: int = 10) -> None:
         super().__init__(weight=weight, ignore_index=ignore_index, reduce=False)
         self.k = k
@@ -102,6 +107,7 @@ class TopKLoss(torch.nn.CrossEntropyLoss):
 
 
 class SensitivitySpecificityLoss(DiceLoss):
+
     def __init__(self, w: float = 0.5, batch_dice: bool = True, square: bool = False, smooth: float = 1) -> None:
         super().__init__(weight=None, batch_dice=batch_dice, square=square, smooth=smooth)
         self.w = w
@@ -115,6 +121,7 @@ class SensitivitySpecificityLoss(DiceLoss):
 
 
 class TverskyLoss(torch.nn.Module):
+
     def __init__(self, alpha: float = 1, beta: float = 1, gamma: float = 1, batch_loss=False) -> None:
         super().__init__()
         self.alpha = alpha
@@ -140,6 +147,7 @@ class TverskyLoss(torch.nn.Module):
 
 
 class GeneralizedDiceloss(DiceLoss):
+
     def __init__(self, weight: Tensor = None, batch_dice: bool = True, square: bool = False, smooth: float = 1) -> None:
         assert len(weight.shape) == 1
         super().__init__(weight=None, batch_dice=batch_dice, square=square, smooth=smooth)
@@ -150,11 +158,13 @@ class GeneralizedDiceloss(DiceLoss):
 
 
 class AsymmetricSimilarityLoss(TverskyLoss):
+
     def __init__(self, beta: float = 1.5, batch_loss=False) -> None:
         super().__init__(alpha=1 / (1 + beta**2), beta=beta**2 / (1 + beta**2), gamma=1, batch_loss=batch_loss)
 
 
 class PenaltyLoss(GeneralizedDiceloss):
+
     def __init__(self, weight: Tensor = None, k: float = 2.5, batch_dice: bool = True, square: bool = False, smooth: float = 1) -> None:
         super().__init__(weight=weight, batch_dice=batch_dice, square=square, smooth=smooth)
         self.k = k
@@ -165,6 +175,7 @@ class PenaltyLoss(GeneralizedDiceloss):
 
 
 def hausdorff_distance_loss(pred: Tensor, label: Tensor) -> Tensor:
+    from scipy.ndimage import distance_transform_edt
     pred_bmap = pred.argmax(dim=1)
     pred_bmap = F.one_hot(pred_bmap, num_classes=pred.shape[1]).permute(0, len(pred.shape) - 1, *range(1, len(pred.shape) - 1)).cpu().numpy()
     if len(pred.shape) == len(label.shape) + 1:
