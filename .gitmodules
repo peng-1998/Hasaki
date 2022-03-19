@@ -1,0 +1,3 @@
+[submodule "submodule/Connected_components_PyTorch"]
+	path = submodule/Connected_components_PyTorch
+	url = https://github.com/peng-1998/Connected_components_PyTorch
