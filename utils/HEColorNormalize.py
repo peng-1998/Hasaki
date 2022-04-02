@@ -3,7 +3,7 @@ from typing import Union
 import torch
 import torchvision.transforms.functional as TF
 from PIL import Image
-from torch.functional import Tensor
+from torch import Tensor
 from torch.nn.modules.module import Module
 
 
@@ -16,7 +16,7 @@ class HE_ColorNormalization(Module):
     $$
     '''
 
-    def __init__(self, target_img: str = None, use_cuda: bool = False, W_target: Tensor = None, r: int = 2, Lambda: float = 0.1) -> None:
+    def __init__(self, target_img: str | Tensor = None, use_cuda: bool = False, W_target: Tensor = None, r: int = 2, Lambda: float = 0.1) -> None:
         '''
         Args:
             target_img:The path of target image.When W_target is None, this parameter cannot be None.
@@ -26,7 +26,7 @@ class HE_ColorNormalization(Module):
             Lambda:Coefficients of sparse control items.
         '''
         super().__init__()
-        assert target_img or W_target
+        assert target_img is not None or W_target is not None
         from torchnmf.nmf import NMF
         self.r = r * 2
         self.Lambda = Lambda
@@ -35,8 +35,13 @@ class HE_ColorNormalization(Module):
         if W_target:
             self.W_target = W_target.to(self.device)
         else:
-            img_target = Image.open(target_img)
-            img_target = TF.to_tensor(img_target).clamp(0.01, 0.99).to(self.device)
+            if isinstance(target_img, str):
+                img_target = Image.open(target_img)
+                img_target = TF.to_tensor(img_target).clamp(0.01, 0.99).to(self.device)
+            elif isinstance(target_img, Tensor):
+                img_target = target_img.to(device=self.device, dtype=torch.float32)
+            else:
+                raise Exception(f'"target_img" is expected to be the path of image file or an float image Tensor, but get type {type(target_img)}')
             assert img_target.shape[0] == 3
             img_target = img_target.view(3, -1)
             img_target = -torch.log(img_target)
@@ -45,19 +50,18 @@ class HE_ColorNormalization(Module):
             self.W_target = nmft.H.data
             self.Ht_RM = torch.quantile(nmft.W.data, 0.99)
 
-    def forward(self, pic: Union[Tensor, Image.Image]) -> Union[Tensor, Image.Image]:
+    def forward(self, pic: Tensor | Image.Image) -> Tensor | Image.Image:
         from torchnmf.nmf import NMF
         if isinstance(pic, Tensor):
-            assert pic.shape[0] == 3
-            source_img_size = pic.shape
-            source_img = pic.clamp(0.01, 0.99).to(self.device).view(3, -1)
+            source_img_size = pic
         elif isinstance(pic, Image.Image):
-            source_img = TF.to_tensor(pic).clamp(0.01, 0.99).to(self.device)
-            assert source_img.shape[0] == 3
-            source_img_size = source_img.shape
-            source_img = source_img.view(3, -1)
+            source_img = TF.to_tensor(pic)
         else:
             raise Exception('Unsupported types')
+        assert source_img.shape[0] == 3
+        source_img = source_img.clamp(0.01, 0.99).to(self.device).view(3, -1)
+        source_img_size = source_img.shape
+        source_img = source_img.view(3, -1)
         source_img = -torch.log(source_img)
         nmfs = NMF(source_img.shape, self.r).to(self.device)
         nmfs.sparse_fit(source_img, max_iter=100)
