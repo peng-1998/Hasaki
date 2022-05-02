@@ -133,6 +133,7 @@ class ElasticDeformation(Module):
         '''
         If \'interpolations\' is an empty array,it will apply parameter \'interpolation\' for each input image.
         If not,the parameter \'interpolations\''s should have the same lenght with input image.
+        We recommend bilinear interpolation for the original image and nearest neighbor sampling for the label.
         '''
         super().__init__()
         self.grids_size = list(grids_size)
