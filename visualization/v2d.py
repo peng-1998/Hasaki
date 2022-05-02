@@ -1,3 +1,5 @@
+from typing import Union
+
 import torch
 from torch import Tensor
 from torch.nn import Module
@@ -97,7 +99,7 @@ class ColorMap():
 
 class IndexMapDyeing(Module):
 
-    def __init__(self, colormap: Tensor | ColorMap, max_index: int, use_black_for_0: bool = True) -> None:
+    def __init__(self, colormap: Union[Tensor, ColorMap], max_index: int, use_black_for_0: bool = True) -> None:
         '''
             Args:
                 colormap:List of RGB color with shape (N,3) and type torch.float or a ColorMap instance
@@ -105,7 +107,7 @@ class IndexMapDyeing(Module):
                 use_black_for_0:It will set black for map where index is 0 when it is True
         '''
         super().__init__()
-        assert isinstance(colormap, Tensor | ColorMap)
+        assert isinstance(colormap, (Tensor, ColorMap))
         if isinstance(colormap, ColorMap):
             colormap = colormap.get_map(max_index + (0 if use_black_for_0 else 1))
             if use_black_for_0:

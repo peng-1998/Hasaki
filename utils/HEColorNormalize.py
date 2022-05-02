@@ -16,7 +16,7 @@ class HE_ColorNormalization(Module):
     $$
     '''
 
-    def __init__(self, target_img: str | Tensor = None, use_cuda: bool = False, W_target: Tensor = None, r: int = 2, Lambda: float = 0.1) -> None:
+    def __init__(self, target_img: Union[str, Tensor] = None, use_cuda: bool = False, W_target: Tensor = None, r: int = 2, Lambda: float = 0.1) -> None:
         '''
         Args:
             target_img:The path of target image.When W_target is None, this parameter cannot be None.
@@ -50,7 +50,7 @@ class HE_ColorNormalization(Module):
             self.W_target = nmft.H.data
             self.Ht_RM = torch.quantile(nmft.W.data, 0.99)
 
-    def forward(self, pic: Tensor | Image.Image) -> Tensor | Image.Image:
+    def forward(self, pic: Union[Tensor, Image.Image]) -> Union[Tensor, Image.Image]:
         from torchnmf.nmf import NMF
         if isinstance(pic, Tensor):
             source_img_size = pic

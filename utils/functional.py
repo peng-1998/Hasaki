@@ -1,7 +1,9 @@
+from typing import Union
+
 import torch
 
 
-def random_choices(array_or_length: torch.Tensor | int, count: int, repeat=False) -> torch.Tensor:
+def random_choices(array_or_length: Union[torch.Tensor, int], count: int, repeat=False) -> torch.Tensor:
     '''
     Args:
         array_or_length:Tensor randomly chosen from  or length for it
