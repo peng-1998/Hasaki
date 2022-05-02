@@ -1,5 +1,6 @@
 # Hasaki
 
+## 简介
 一个用于医学图像分割的工具包.
 模块:
 * data: 包含多个医学图像数据集的Dataset类封装.
@@ -17,3 +18,12 @@ data模块用到了许多其他库，很多库可能用不到，可以选择性�
 
 注意：
 * utils模块的labeling_2d(连通域分割)默认使用cc_torch(https://github.com/zsef123/Connected_components_PyTorch)作为执行后端,但是此项目要求在CUDA上执行. 如果想要让这个函数执行在CUDA上请保证:您的计算机安装了CUDA工具(通过执行nvcc -V 命令检查),您的PyTorch使用相同版本的CUDA进行编译. 安装请阅读Hasaki/submodule/Connected_components_PyTorch/readme.md . 如果无法在CUDA上执行,labeling_2d将会使用scipy库当中的函数作为后端.
+
+## 使用 
+将Hasaki克隆到项目文件夹下就可以使用
+
+## python 版本
+主分支基于python3.10,一些语法与python3.10之前的版本不兼容,请克隆python38分支如果使用python3.10之前的版本.
+```bash
+git clone -b python38 https://github.com/peng-1998/Hasaki
+```
