@@ -61,10 +61,8 @@ def F1_score(input: Tensor, target: Tensor) -> float:
     """
 
     assert isinstance(input, Tensor) and isinstance(target, Tensor) and input.shape == target.shape
-    pl = input + target
-    tp = (pl == 2).sum().item()
-    fpfn = (pl == 1).sum().item()
-    return tp / (tp + 0.5 * fpfn + 1e-6)
+    input, target = input > 0.5, target > 0.5
+    return 2 * (input & target).sum() / (input.sum() + target.sum())
 
 
 def IoU(input: Tensor, target: Tensor) -> float:
@@ -88,10 +86,8 @@ def IoU(input: Tensor, target: Tensor) -> float:
     """
 
     assert isinstance(input, Tensor) and isinstance(target, Tensor) and input.shape == target.shape
-    pl = input + target
-    tp = (pl == 2).sum().item()
-    fpfn = (pl == 1).sum().item()
-    return tp / (tp + fpfn + 1e-6)
+    input, target = input > 0.5, target > 0.5
+    return (input & target).sum() / (input | target).sum()
 
 
 def Dice_score(input: Tensor, target: Tensor) -> float:

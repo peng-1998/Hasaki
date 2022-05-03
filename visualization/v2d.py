@@ -121,7 +121,7 @@ class IndexMapDyeing(Module):
         return self.colormap.to(input.device)[input].permute(*dims_order)
 
 
-class BinaryMapContrast(IndexMapDyeing):
+class BinaryMapContrast(Module):
 
     def __init__(self, predchannel: int = 0, lablechannel: int = 1) -> None:
         '''
