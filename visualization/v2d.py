@@ -7,7 +7,7 @@ from torch.nn.functional import interpolate
 class ColorMapType:
     COLORMAP_JET = 0
     COLORMAP_HSV = 1
-    COLORMAP_RAINBOW = 3
+    COLORMAP_RAINBOW = 2
 
 
 class ColorMap():
@@ -49,7 +49,7 @@ class ColorMap():
             0.1000000000000001, 0.08431372549019622, 0.06862745098039236, 0.05294117647058805, 0.03725490196078418, 0.02156862745098032, 0.00588235294117645, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
         ]
-        return torch.tensor([r, g, b]).T
+        return torch.tensor([r, g, b])
 
     @torch.no_grad()
     def hsv():
@@ -65,7 +65,7 @@ class ColorMap():
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.09523809523809523, 0.1904761904761905, 0.2857142857142857, 0.3809523809523809, 0.4761904761904762, 0.5714285714285714, 0.6666666666666666, 0.7619047619047619, 0.8571428571428571, 0.9523809523809523, 1, 1, 1, 1, 1, 1, 1,
             1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0.9523809523809526, 0.8571428571428577, 0.7619047619047614, 0.6666666666666665, 0.5714285714285716, 0.4761904761904767, 0.3809523809523805, 0.2857142857142856, 0.1904761904761907, 0.09523809523809579, 0
         ]
-        return torch.tensor([r, g, b]).T
+        return torch.tensor([r, g, b])
 
     @torch.no_grad()
     def rainbow():
@@ -83,7 +83,7 @@ class ColorMap():
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.01587301587301582, 0.09523809523809534, 0.1746031746031744, 0.2539682539682535, 0.333333333333333, 0.412698412698413, 0.4920634920634921, 0.5714285714285712,
             0.6507936507936507, 0.7301587301587302, 0.8095238095238093, 0.8888888888888884, 0.9682539682539679, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
         ]
-        return torch.tensor([r, g, b]).T
+        return torch.tensor([r, g, b])
 
     colormapgetter = [jet, hsv, rainbow]
 
@@ -92,44 +92,70 @@ class ColorMap():
 
     @torch.no_grad()
     def get_map(self, length: int):
-        return interpolate(self.colormap, size=[length, 3], mode='linear')
+        return interpolate(self.colormap.unsqueeze(), size=[length], mode='linear')[0].T
 
 
 class IndexMapDyeing(Module):
+    """Create stained images for 2D indexed images
+    example:
+        from Hasaki.visualization import IndexMapDyeing, ColorMapType, ColorMap
+        import torch
+        index_map = torch.randint(0, 10, (10, 10))
+        dyer = IndexMapDyeing(ColorMapType.COLORMAP_JET, max_index = 10, use_black_for_0 = True)
+        image = dyer(index_map) # image is a tensor of size (3, 10, 10)
+        index_map = torch.randint(0, 10, (2, 10, 10))
+        image = dyer(index_map) # image is a tensor of size (2, 3, 10, 10)
+    """
 
-    def __init__(self, colormap: Tensor | ColorMap, max_index: int, use_black_for_0: bool = True) -> None:
-        '''
-            Args:
-                colormap:List of RGB color with shape (N,3) and type torch.float or a ColorMap instance
-                max_index:The max value in your index-map 
-                use_black_for_0:It will set black for map where index is 0 when it is True
-        '''
+    def __init__(self, colormap: Tensor | ColorMap, max_index: int = None, use_black_for_0: bool = True) -> None:
+        """
+        Args:
+            colormap (Tensor | ColorMap): The colormap to use for the dyeing. If use Tensor, the shape must be (max_index + 1 or more,3). If use ColorMap, see Class ColorMap.
+            max_index (int): The maximum index to use. If None, the maximum index is determined from the indexed map.
+            use_black_for_0 (bool, optional): Whether use black for index 0. Defaults to True.
+        """
+
         super().__init__()
         assert isinstance(colormap, Tensor | ColorMap)
         if isinstance(colormap, ColorMap):
             colormap = colormap.get_map(max_index + (0 if use_black_for_0 else 1))
             if use_black_for_0:
                 colormap = torch.cat([torch.zeros(1, 3), colormap])
-        assert colormap.shape.__len__() == 2 and colormap.shape[1] == 3
+        assert len(colormap.shape) == 2 and colormap.shape[1] == 3
         self.colormap = colormap
 
     @torch.no_grad()
     def forward(self, input: Tensor) -> Tensor:
         assert input.shape.__len__() >= 2
-        dims_order = [_ for _ in range(input.shape.__len__())]
-        dims_order.insert(-3, 3)
+        dims_order = [_ for _ in range(len(input.shape))]
+        dims_order.insert(-3, len(input.shape))
         return self.colormap.to(input.device)[input].permute(*dims_order)
 
 
 class BinaryMapContrast(Module):
+    """Create contrasted binary images for 2D binary images
+    example:
+        from Hasaki.visualization import BinaryMapContrast
+        import torch
+        pred = torch.randint(0, 2, (10, 10))
+        label = torch.randint(0, 2, (10, 10))
+        contrast = BinaryMapContrast()
+        image = contrast(pred, label) # image is a tensor of size (3, 10, 10)
+        pred = torch.randint(0, 2, (2, 10, 10))
+        label = torch.randint(0, 2, (2, 10, 10))
+        image = contrast(pred, label) # image is a tensor of size (2, 3, 10, 10)
+    """
 
     def __init__(self, predchannel: int = 0, lablechannel: int = 1) -> None:
-        '''
+        """
+
         Args:
-            predchannel:The index of channel in RGB image,the value should in [0,1,2]
-            lablechannel:The index of channel in RGB image and should be different with predchannel
-        '''
-        assert predchannel in [0, 1, 2] and lablechannel in [0, 1, 2] and predchannel != lablechannel
+            predchannel (int, optional): The index of channel in RGB image,the value should in [0,1,2]. Defaults to 0.
+            lablechannel (int, optional): The index of channel in RGB image and should be different with predchannel. Defaults to 1.
+        """
+        assert predchannel in [0, 1, 2] and lablechannel in [0, 1, 2]
+        if predchannel == lablechannel:
+            raise ValueError('predchannel and lablechannel should be different to Show the difference between prediction and label')
         super().__init__()
         self.predchannel = predchannel
         self.lablechannel = lablechannel
