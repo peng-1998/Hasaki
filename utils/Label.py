@@ -28,12 +28,15 @@ def _labeling_2d_with_scipy(image: Tensor) -> Tensor:
 
 
 def labeling_2d(image: Tensor) -> Tensor:
-    '''
+    """
+
     Args:
-        image:An binary 2D image with shape (H,W),the dtype should be bool or int and long
-    Return:
-        Tensor of objects indexes with same shape with image and dtype long
-    '''
+        image (Tensor): An binary 2D image with shape (H,W),the dtype should be bool or int and long.
+
+    Returns:
+        Tensor: Tensor of objects indexes with same shape with image and dtype long.
+    """
+
     if SEGMENT_BACKEND == 'cc_torch':
         return _labeling_2d_with_cc_troch(image)
     return _labeling_2d_with_scipy(image)

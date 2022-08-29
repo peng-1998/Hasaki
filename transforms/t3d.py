@@ -104,7 +104,7 @@ class RandomRotation(Module):
     """
     def __init__(self, degrees: Tuple[int, int, int], interpolation=InterpolationMode.BILINEAR, expand=False,interpolations=[]) -> None:
         """
-        Args::
+        Args:
             degrees:The max value for rotate angel in x,y,z axis.Use [360,360,360] for any angle.
             interpolation:Interpolation mode.
             expand:It will expand the size of tensor to contains the image after rotated.
@@ -131,7 +131,7 @@ class ElasticDeformation(Module):
     """
     def __init__(self, grids_size: Tuple[int, int, int], sigma: float,interpolation=InterpolationMode.BILINEAR,interpolations=[]):
         """
-        Args::
+        Args:
             grids_size:The shape of grid which guide elastic deformation transformation.The smaller grid there is the smoother the deformation changes.
             sigma:The sigma of an normal distribution.The bigger sigma is the more intense change will be.
         """

@@ -1,16 +1,18 @@
 import torch
+from torch import Tensor
 
 
-def random_choices(array_or_length: torch.Tensor | int, count: int, repeat=False) -> torch.Tensor:
-    '''
+def random_choices(array_or_length: Tensor | int, count: int, repeat=False) -> Tensor:
+    """Create a random sample from array_or_length with count.
+
     Args:
-        array_or_length:Tensor randomly chosen from  or length for it
-        count:The count of return indexes
-        repeat: Whether the indexes can be repeated
-    Return:
-        Tensor of indexes with type long and same device with array_or_length if array_or_length is int \\
-        Tensor of data chosen from array_or_length if array_or_length is Tensor
-    '''
+        array_or_length (Tensor | int): Tensor randomly chosen from array or length for it.
+        count (int): Number of samples to draw.
+        repeat (bool, optional): Whether allow multiple occurrences of the same element. Defaults to False.
+
+    Returns:
+        Tensor: Index of samples if array_or_length is int, otherwise Tensor of samples.
+    """
 
     def _random_choices(length=0, count=0, repeat=False):
         assert count >= 0 and length >= 0

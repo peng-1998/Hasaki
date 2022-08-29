@@ -1,1 +1,1 @@
-from .v2d import IndexMapDyeing, ColorMap, BinaryMapContrast
+from .v2d import IndexMapDyeing, ColorMap, BinaryMapContrast, ColorMapType
