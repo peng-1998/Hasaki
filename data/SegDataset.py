@@ -1823,7 +1823,7 @@ class PanNuke(Dataset):
     md5s = {
         'fold_1': 'e1b16ef84db3e3368d9f5bd4e61ed65c', 
         'fold_2': 'f1839d332c4b8e12c7c01882020ac457', 
-        'fold_3': '74fcef0416daeba77a993ea5a017875d'
+        'fold_3': '441950a966ee73d6e9780196815a0b20'
         }
 
     def __init__(self, root: str, transform: Optional[Callable] = None, download: bool = False) -> None:
